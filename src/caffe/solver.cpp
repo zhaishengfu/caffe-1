@@ -158,6 +158,7 @@ template <typename Dtype>
 void Solver<Dtype>::Solve(const char* resume_file) {
   Caffe::set_phase(Caffe::TRAIN);
   LOG(INFO) << "Solving " << net_->name();
+  LOG(INFO) << "Learning Rate Policy: " << param_.lr_policy();
   PreSolve();
 
   iter_ = 0;
@@ -257,7 +258,6 @@ void Solver<Dtype>::TestAll() {
   }
 }
 
-
 template <typename Dtype>
 void Solver<Dtype>::Test(const int test_net_id) {
   LOG(INFO) << "Iteration " << iter_
@@ -336,6 +336,7 @@ void Solver<Dtype>::Snapshot() {
   SnapshotSolverState(&state);
   state.set_iter(iter_);
   state.set_learned_net(model_filename);
+  state.set_current_step(current_step_);
   snapshot_filename = filename + ".solverstate";
   LOG(INFO) << "Snapshotting solver state to " << snapshot_filename;
   WriteProtoToBinaryFile(state, snapshot_filename.c_str());
@@ -351,6 +352,7 @@ void Solver<Dtype>::Restore(const char* state_file) {
     net_->CopyTrainedLayersFrom(net_param);
   }
   iter_ = state.iter();
+  current_step_ = state.current_step();
   RestoreSolverState(state);
 }
 
@@ -370,21 +372,44 @@ Dtype SGDSolver<Dtype>::GetLearningRate() {
   if (lr_policy == "fixed") {
     rate = this->param_.base_lr();
   } else if (lr_policy == "step") {
-    int current_step = this->iter_ / this->param_.stepsize();
+    this->current_step_ = this->iter_ / this->param_.stepsize();
     rate = this->param_.base_lr() *
-        pow(this->param_.gamma(), current_step);
+        pow(this->param_.gamma(), this->current_step_);
   } else if (lr_policy == "exp") {
     rate = this->param_.base_lr() * pow(this->param_.gamma(), this->iter_);
   } else if (lr_policy == "inv") {
     rate = this->param_.base_lr() *
         pow(Dtype(1) + this->param_.gamma() * this->iter_,
             - this->param_.power());
+  } else if (lr_policy == "multistep") {
+    if (this->current_step_ < this->param_.stepvalue_size() && 
+          this->iter_ >= this->param_.stepvalue(this->current_step_)) {
+      this->current_step_++;
+      LOG(ERROR) << "MultiStep Status: Iteration " << this->iter_ << ", step = " << this->current_step_;
+    }
+    rate = this->param_.base_lr() *
+        pow(this->param_.gamma(), this->current_step_);
+  } else if (lr_policy == "stepearly") {
+    int stepearly_ = this->param_.stepearly();
+    if (this->all_test_acc_.size() > stepearly_ && this->all_test_acc_updated_) {
+      this->all_test_acc_updated_ = false;
+      Dtype max_acc = *std::max_element(this->all_test_acc_.end() - stepearly_,
+        this->all_test_acc_.end());
+      Dtype prev_acc = *std::max_element(this->all_test_acc_.begin(),
+	this->all_test_acc_.end() - stepearly_);
+      LOG(ERROR) << "StepEarly Check: curr_max_acc = " << max_acc << " prev_max_acc = " << prev_acc;
+      if (max_acc < prev_acc) {
+        this->current_step_++;
+        LOG(ERROR) << "StepEarly Status: Iteration " << this->iter_-1 << ", step = " << this->current_step_;
+      }
+    }
+    rate = this->param_.base_lr() *
+        pow(this->param_.gamma(), this->current_step_);
   } else {
     LOG(FATAL) << "Unknown learning rate policy: " << lr_policy;
   }
   return rate;
 }
-
 
 template <typename Dtype>
 void SGDSolver<Dtype>::PreSolve() {
