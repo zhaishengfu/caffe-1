@@ -363,8 +363,15 @@ void Solver<Dtype>::Restore(const char* state_file) {
 //    - step: return base_lr * gamma ^ (floor(iter / step))
 //    - exp: return base_lr * gamma ^ iter
 //    - inv: return base_lr * (1 + gamma * iter) ^ (- power)
-// where base_lr, gamma, step and power are defined in the solver parameter
-// protocol buffer, and iter is the current iteration.
+//    - multistep: similar to step but it allows non uniform steps defined by
+//      stepvalue
+//    - poly: the effective learning rate follows a polynomial decay, to be
+//      zero by the max_iter. return base_lr (1 - iter/max_iter) ^ (power)
+//    - sigmoid: the effective learning rate follows a sigmod decay
+//      return base_lr ( 1/(1 + exp(-gamma * (iter - stepsize))))
+//
+// where base_lr, max_iter, gamma, step, stepvalue and power are defined
+// in the solver parameter protocol buffer, and iter is the current iteration.
 template <typename Dtype>
 Dtype SGDSolver<Dtype>::GetLearningRate() {
   Dtype rate;
@@ -385,26 +392,19 @@ Dtype SGDSolver<Dtype>::GetLearningRate() {
     if (this->current_step_ < this->param_.stepvalue_size() && 
           this->iter_ >= this->param_.stepvalue(this->current_step_)) {
       this->current_step_++;
-      LOG(INFO) << "MultiStep Status: Iteration " << this->iter_ << ", step = " << this->current_step_;
+      LOG(INFO) << "MultiStep Status: Iteration " <<
+      this->iter_ << ", step = " << this->current_step_;
     }
     rate = this->param_.base_lr() *
         pow(this->param_.gamma(), this->current_step_);
-  } else if (lr_policy == "stepearly") {
-    int stepearly_ = this->param_.stepearly();
-    if (this->all_test_acc_.size() > stepearly_ && this->all_test_acc_updated_) {
-      this->all_test_acc_updated_ = false;
-      Dtype max_acc = *std::max_element(this->all_test_acc_.end() - stepearly_,
-        this->all_test_acc_.end());
-      Dtype prev_acc = *std::max_element(this->all_test_acc_.begin(),
-	this->all_test_acc_.end() - stepearly_);
-      LOG(ERROR) << "StepEarly Check: curr_max_acc = " << max_acc << " prev_max_acc = " << prev_acc;
-      if (max_acc < prev_acc) {
-        this->current_step_++;
-        LOG(ERROR) << "StepEarly Status: Iteration " << this->iter_-1 << ", step = " << this->current_step_;
-      }
-    }
-    rate = this->param_.base_lr() *
-        pow(this->param_.gamma(), this->current_step_);
+  } else if (lr_policy == "poly") {
+    rate = this->param_.base_lr() * pow(Dtype(1.) -
+        (Dtype(this->iter_) / Dtype(this->param_.max_iter())),
+        this->param_.power());
+  } else if (lr_policy == "sigmoid") {
+    rate = this->param_.base_lr() * (Dtype(1.) /
+        (Dtype(1.) + exp(-this->param_.gamma() * (Dtype(this->iter_) -
+          Dtype(this->param_.stepsize())))));
   } else {
     LOG(FATAL) << "Unknown learning rate policy: " << lr_policy;
   }
