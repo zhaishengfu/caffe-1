@@ -159,7 +159,7 @@ ifneq ($(CPU_ONLY), 1)
 endif
 LIBRARIES += \
 	glog gflags pthread protobuf leveldb snappy \
-	lmdb \
+	lmdb cmaes \
 	boost_system \
 	hdf5_hl hdf5 \
 	opencv_core opencv_highgui opencv_imgproc
@@ -238,7 +238,7 @@ endif
 ifeq ($(DEBUG), 1)
 	COMMON_FLAGS += -DDEBUG -g -O0
 else
-	COMMON_FLAGS += -DNDEBUG -O2
+	COMMON_FLAGS += -DNDEBUG -O4
 endif
 
 # BLAS configuration (default = ATLAS)
@@ -272,7 +272,7 @@ LIBRARY_DIRS += $(BLAS_LIB)
 
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
-CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
+CXXFLAGS += -Wall -Wextra -g -std=gnu++11 -fopenmp -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
 NVCCFLAGS := -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
