@@ -193,6 +193,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
 
     const bool display = param_.display() && iter_ % param_.display() == 0;
     net_->set_debug_info(display && param_.debug_info());
+
     Dtype loss = net_->ForwardBackward(bottom_vec);
     if (losses.size() < average_loss) {
       losses.push_back(loss);
@@ -224,10 +225,9 @@ void Solver<Dtype>::Solve(const char* resume_file) {
               << result_vec[k] << loss_msg_stream.str();
         }
       }
-    }
-
+    
     ComputeUpdateValue();
-    net_->Update();
+    //net_->Update();
   }
   // Always save a snapshot after optimization, unless overridden by setting
   // snapshot_after_train := false.
@@ -423,6 +423,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue() {
   string regularization_type = this->param_.regularization_type();
   switch (Caffe::mode()) {
   case Caffe::CPU:
+    //std::cout << "params size=" << net_params.size() << std::endl;
     for (int param_id = 0; param_id < net_params.size(); ++param_id) {
       // Compute the value to history, and then copy them to the blob's diff.
       Dtype local_rate = rate * net_params_lr[param_id];
@@ -451,6 +452,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue() {
       caffe_cpu_axpby(net_params[param_id]->count(), local_rate,
                 net_params[param_id]->cpu_diff(), momentum,
                 history_[param_id]->mutable_cpu_data());
+
       // copy
       caffe_copy(net_params[param_id]->count(),
           history_[param_id]->cpu_data(),
@@ -774,4 +776,98 @@ INSTANTIATE_CLASS(SGDSolver);
 INSTANTIATE_CLASS(NesterovSolver);
 INSTANTIATE_CLASS(AdaGradSolver);
 
+
+void CMAESSolver::PreSolve() {
+  // Initialize the history
+  vector<shared_ptr<Blob<double> > >& net_params = this->net_->params();
+  history_.clear();
+  for (int i = 0; i < net_params.size(); ++i) {
+    const Blob<double>* net_param = net_params[i].get();
+    history_.push_back(shared_ptr<Blob<double> >(new Blob<double>(
+        net_param->num(), net_param->channels(), net_param->height(),
+        net_param->width())));
+  }
+}
+
+void CMAESSolver::ComputeUpdateValue() {
+  // solve one iteration
+  //std::cout << "sep=" << optim_._parameters._sep << std::endl;
+  dMat candidates = optim_.ask();
+  optim_.eval(candidates);
+  optim_.tell();
+  optim_.inc_iter();
+
+  std::cout << "best fvalue=" << optim_.get_solutions().best_candidate().get_fvalue() << " / sigma=" << optim_.get_solutions().sigma() << std::endl;
+
+  //std::cout << "best x=" << optim_.get_solutions().best_candidate().get_x_dvec().transpose() << std::endl;
+  
+  // fillup diff with best candidate solution at every iteration.
+  //std::cout << optim_.get_solutions().best_candidate().get_fvalue() << std::endl;
+  const double *pos = optim_.get_solutions().best_candidate().get_x();
+  //int count = 0;
+  vector<shared_ptr<Blob<double> > >& net_params = this->net_->params();
+  for (int param_id=0;param_id<net_params.size();++param_id) {
+    caffe_copy(net_params[param_id]->count(),
+	       pos,
+	       net_params[param_id]->mutable_cpu_data()); //TODO: should copy diff or replace net values in blob->mutable_cpu_data() and put diff to 0.
+    /*int cdim = net_params[param_id]->count();
+    for (int i=0;i<cdim;i++)
+      net_params[param_id]->mutable_cpu_data()[i] = optim_._solutions.best_candidate()._x(count);
+      count += net_params[param_id]->count();*/
+    pos += net_params[param_id]->count();
+  }
+  double loss;
+  std::vector<Blob<double>*> bottom_vec; // dummy.
+  net_->Forward(bottom_vec,&loss);
+  std::cout << "eval loss=" << loss << std::endl;
+  
+}
+
+void CMAESSolver::SnapshotSolverState(SolverState *state)
+{
+  //TODO
+    state->clear_history();
+  for (int i = 0; i < history_.size(); ++i) {
+    // Add history
+    BlobProto* history_blob = state->add_history();
+    history_[i]->ToProto(history_blob);
+  }
+}
+
+void CMAESSolver::RestoreSolverState(const SolverState &state)
+{
+  //TODO
+  CHECK_EQ(state.history_size(), history_.size())
+    << "Incorrect length of history blobs.";
+  LOG(INFO) << "CMAESSolver: restoring history";
+  for (int i = 0; i < history_.size(); ++i) {
+    history_[i]->FromProto(state.history(i));
+  }
+
+  //TODO: update optimizer's state.
+  int dim = 0;
+  std::vector<double> x0;
+    for (int param_id=0;param_id<this->net_->params().size();++param_id)
+      {
+	int cdim = this->net_->params()[param_id]->count();
+	const double *ddata = this->net_->params()[param_id]->cpu_data();
+	for (int i=0;i<cdim;i++)
+	  x0.push_back(ddata[i]);
+	dim += cdim;
+      }
+    double sigma = 1e-2;
+    //TODO: optional gradient function.
+    CMAParameters<> cmaparams(x0,sigma);
+    cmaparams.set_str_algo("sepacmaes");
+    cmaparams.set_sep();
+    cmaparams.set_max_hist(2);
+    cmaparams.set_quiet(false);
+    //cmaparams.set_noisy();
+    optim_ = ESOptimizer<CMAStrategy<ACovarianceUpdate>,CMAParameters<>>(objloss_,cmaparams);
+    optim_.set_gradient_func(gradf_);
+}
+  
+INSTANTIATE_CLASS(Solver);
+INSTANTIATE_CLASS(SGDSolver);
+  
 }  // namespace caffe
