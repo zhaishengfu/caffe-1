@@ -389,7 +389,7 @@ Dtype SGDSolver<Dtype>::GetLearningRate() {
         pow(Dtype(1) + this->param_.gamma() * this->iter_,
             - this->param_.power());
   } else if (lr_policy == "multistep") {
-    if (this->current_step_ < this->param_.stepvalue_size() && 
+    if (this->current_step_ < this->param_.stepvalue_size() &&
           this->iter_ >= this->param_.stepvalue(this->current_step_)) {
       this->current_step_++;
       LOG(INFO) << "MultiStep Status: Iteration " <<
