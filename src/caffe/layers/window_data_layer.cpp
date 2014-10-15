@@ -21,6 +21,10 @@
 //   'source' field specifies the window_file
 //   'crop_size' indicates the desired warped size
 
+#if CV_VERSION_MAJOR == 3
+const int CV_LOAD_IMAGE_COLOR = cv::IMREAD_COLOR;
+#endif
+
 namespace caffe {
 
 template <typename Dtype>
@@ -398,5 +402,5 @@ void WindowDataLayer<Dtype>::InternalThreadEntry() {
 }
 
 INSTANTIATE_CLASS(WindowDataLayer);
-
+REGISTER_LAYER_CLASS(WINDOW_DATA, WindowDataLayer);
 }  // namespace caffe
