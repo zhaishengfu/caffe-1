@@ -23,7 +23,7 @@ template <typename Dtype>
 Solver<Dtype>::Solver(const string& param_file)
     : net_() {
   SolverParameter param;
-  ReadProtoFromTextFile(param_file, &param);
+  ReadProtoFromTextFileOrDie(param_file, &param);
   Init(param);
 }
 
@@ -162,6 +162,7 @@ void Solver<Dtype>::Solve(const char* resume_file) {
   PreSolve();
 
   iter_ = 0;
+  current_step_ = 0;
   if (resume_file) {
     LOG(INFO) << "Restoring previous solver status from " << resume_file;
     Restore(resume_file);
