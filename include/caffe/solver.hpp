@@ -33,7 +33,7 @@ class Solver {
   }
   int iter() { return iter_; }
 
- protected:
+ public:
   // PreSolve is run before any solving iteration starts, allowing one to
   // put up some scaffold.
   virtual void PreSolve() {}
