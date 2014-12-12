@@ -32,10 +32,20 @@ void MemoryDataLayer<Dtype>::AddDatumVector(const vector<Datum>& datum_vector) {
   CHECK(!has_new_data_) <<
       "Can't add Datum when earlier ones haven't been consumed"
       << " by the upper layers";
+
   size_t num = datum_vector.size();
+  if (batch_size_ != num) {
+    needs_reshape_ = true;
+    batch_size_ = num;
+    added_data_.Reshape(batch_size_, channels_, height_, width_);
+    added_label_.Reshape(batch_size_, 1, 1, 1);
+  }
+
   CHECK_GT(num, 0) << "There is no datum to add";
   CHECK_LE(num, batch_size_) <<
       "The number of added datum must be no greater than the batch size";
+
+  std::cout << "adding datum\n";
 
   // Apply data transformations (mirror, scale, crop...)
   this->data_transformer_.Transform(datum_vector, &added_data_);
@@ -43,6 +53,42 @@ void MemoryDataLayer<Dtype>::AddDatumVector(const vector<Datum>& datum_vector) {
   Dtype* top_label = added_label_.mutable_cpu_data();
   for (int item_id = 0; item_id < num; ++item_id) {
     top_label[item_id] = datum_vector[item_id].label();
+  }
+  // num_images == batch_size_
+  Dtype* top_data = added_data_.mutable_cpu_data();
+  Reset(top_data, top_label, batch_size_);
+  has_new_data_ = true;
+}
+
+template <typename Dtype>
+void MemoryDataLayer<Dtype>::AddMatVector(const vector<cv::Mat>& mat_vector,
+    const vector<int>& labels) {
+
+  CHECK(!has_new_data_) <<
+      "Can't add Mat when earlier ones haven't been consumed"
+      << " by the upper layers";
+
+  CHECK_EQ(mat_vector.size(), labels.size()) <<
+      "vector of labels and vector of mats need to be of the same size";
+
+  size_t num = mat_vector.size();
+  if (batch_size_ != num) {
+    needs_reshape_ = true;
+    batch_size_ = num;
+    added_data_.Reshape(batch_size_, channels_, height_, width_);
+    added_label_.Reshape(batch_size_, 1, 1, 1);
+  }
+
+  CHECK_GT(num, 0) << "There is no mat to add";
+  CHECK_LE(num, batch_size_) <<
+      "The number of added mat must be no greater than the batch size";
+
+  // Apply data transformations (mirror, scale, crop...)
+  this->data_transformer_.Transform(mat_vector, &added_data_);
+  // Copy Labels
+  Dtype* top_label = added_label_.mutable_cpu_data();
+  for (int item_id = 0; item_id < num; ++item_id) {
+    top_label[item_id] = labels[item_id];
   }
   // num_images == batch_size_
   Dtype* top_data = added_data_.mutable_cpu_data();
@@ -65,10 +111,15 @@ template <typename Dtype>
 void MemoryDataLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   CHECK(data_) << "MemoryDataLayer needs to be initalized by calling Reset";
+  if (needs_reshape_) {
+    top[0]->Reshape(batch_size_, channels_, height_, width_);
+    top[1]->Reshape(batch_size_, 1, 1, 1);
+  }
   top[0]->set_cpu_data(data_ + pos_ * size_);
   top[1]->set_cpu_data(labels_ + pos_);
   pos_ = (pos_ + batch_size_) % n_;
   has_new_data_ = false;
+  needs_reshape_ = false;
 }
 
 INSTANTIATE_CLASS(MemoryDataLayer);

@@ -63,7 +63,7 @@ bool LmdbDataset<K, V, KCoder, VCoder>::open(const string& filename,
 
   retval = mdb_env_open(env_, filename.c_str(), flag1, 0664);
   if (MDB_SUCCESS != retval) {
-    LOG(ERROR) << "mdb_env_open failed " << mdb_strerror(retval);
+    LOG(ERROR) << "mdb_env_open failed " << filename << " / " << mdb_strerror(retval);
     return false;
   }
 

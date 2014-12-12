@@ -45,7 +45,9 @@ template <typename Dtype>
 void Solver<Dtype>::InitTrainNet() {
   const int num_train_nets = param_.has_net() + param_.has_net_param() +
       param_.has_train_net() + param_.has_train_net_param();
+  std::cout << "has_net=" << param_.has_net() << " / has_net_param=" << param_.has_net_param() << std::endl;
   const string& field_names = "net, net_param, train_net, train_net_param";
+  std::cout << "num_train_nets=" << num_train_nets << std::endl;
   CHECK_GE(num_train_nets, 1) << "SolverParameter must specify a train net "
       << "using one of these fields: " << field_names;
   CHECK_LE(num_train_nets, 1) << "SolverParameter must not contain more than "
