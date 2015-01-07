@@ -44,9 +44,7 @@ void MemoryDataLayer<Dtype>::AddDatumVector(const vector<Datum>& datum_vector) {
   CHECK_GT(num, 0) << "There is no datum to add";
   CHECK_LE(num, batch_size_) <<
       "The number of added datum must be no greater than the batch size";
-
-  std::cout << "adding datum\n";
-
+  
   // Apply data transformations (mirror, scale, crop...)
   this->data_transformer_.Transform(datum_vector, &added_data_);
   // Copy Labels
