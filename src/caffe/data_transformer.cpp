@@ -1,6 +1,4 @@
-#ifndef OSX
 #include <opencv2/core/core.hpp>
-#endif
 
 #include <string>
 #include <vector>
@@ -136,6 +134,7 @@ void DataTransformer<Dtype>::Transform(const Datum& datum,
   const int width = transformed_blob->width();
   const int num = transformed_blob->num();
 
+  //std::cout << "channels=" << channels << " / datum_channels=" << datum_channels << std::endl;
   CHECK_EQ(channels, datum_channels);
   CHECK_LE(height, datum_height);
   CHECK_LE(width, datum_width);
@@ -175,7 +174,7 @@ void DataTransformer<Dtype>::Transform(const vector<Datum> & datum_vector,
   }
 }
 
-template<typename Dtype>
+  template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const vector<cv::Mat> & mat_vector,
                                        Blob<Dtype>* transformed_blob) {
   const int mat_num = mat_vector.size();
@@ -193,9 +192,8 @@ void DataTransformer<Dtype>::Transform(const vector<cv::Mat> & mat_vector,
     uni_blob.set_cpu_data(transformed_blob->mutable_cpu_data() + offset);
     Transform(mat_vector[item_id], &uni_blob);
   }
-}
+  }
 
-#ifndef OSX
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
                                        Blob<Dtype>* transformed_blob) {
@@ -296,7 +294,6 @@ void DataTransformer<Dtype>::Transform(const cv::Mat& cv_img,
     }
   }
 }
-#endif
 
 template<typename Dtype>
 void DataTransformer<Dtype>::Transform(Blob<Dtype>* input_blob,
