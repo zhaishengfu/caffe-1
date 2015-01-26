@@ -92,6 +92,7 @@ private:\
 #define NOT_IMPLEMENTED LOG(FATAL) << "Not Implemented Yet"
 
 // See PR #1236
+#include <opencv2/core/core.hpp>
 namespace cv {class Mat;}
 
 namespace caffe {
