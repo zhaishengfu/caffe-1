@@ -24,7 +24,7 @@ class Classifier(caffe.Net):
                  mean=None, input_scale=None, raw_scale=None,
                  channel_swap=None):
         caffe.Net.__init__(self, model_file, pretrained_file, caffe.TEST)
-
+        
         # configure pre-processing
         in_ = self.inputs[0]
         self.transformer = caffe.io.Transformer(
