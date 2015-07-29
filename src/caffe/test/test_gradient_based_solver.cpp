@@ -52,8 +52,8 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
     }
     InitSolver(param);
     delta_ = (solver_type() == SolverParameter_SolverType_ADAGRAD ||
-    					solver_type() == SolverParameter_SolverType_RMSPROP) ?
-         param.delta() : 0;
+	      solver_type() == SolverParameter_SolverType_RMSPROP) ?
+      param.delta() : 0;
   }
 
   void RunLeastSquaresSolver(const Dtype learning_rate,
@@ -217,7 +217,7 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
         update_value /= std::sqrt(history_value + grad * grad) + delta_;
         break;
       case SolverParameter_SolverType_RMSPROP:
-				update_value /= (std::sqrt(rms_decay*history_value + grad*grad*(1-rms_decay)) + delta_) ;
+	update_value /= (std::sqrt(rms_decay*history_value + grad*grad*(1-rms_decay)) + delta_) ;
         break;
       default:
         LOG(FATAL) << "Unknown solver type: " << solver_type();
@@ -301,7 +301,7 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
     }
     // Solve by equivalent accumulation of gradients over divided batches.
     this->RunLeastSquaresSolver(kLearningRate, kWeightDecay, kMomentum,
-        kNumIters, kIterSize);
+				rms_decay, kNumIters, kIterSize);
     Net<Dtype>& net_accum = *this->solver_->net();
     const vector<shared_ptr<Blob<Dtype> > >& accum_params =
         net_accum.layer_by_name("innerprod")->blobs();
@@ -343,6 +343,8 @@ class GradientBasedSolverTest : public MultiDeviceTest<TypeParam> {
     // Initialize the solver and run K (= iter_to_check) solver iterations.
     RunLeastSquaresSolver(learning_rate, weight_decay, momentum, rms_decay, iter_to_check );
 
+    std::cerr << "rms_decay=" << rms_decay << std::endl;
+    
     // Compute the (K+1)th update using the analytic least squares gradient.
     vector<shared_ptr<Blob<Dtype> > > updated_params;
     ComputeLeastSquaresUpdate(learning_rate, weight_decay, momentum,
