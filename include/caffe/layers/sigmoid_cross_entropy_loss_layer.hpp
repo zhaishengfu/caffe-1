@@ -47,7 +47,12 @@ class SigmoidCrossEntropyLossLayer : public LossLayer<Dtype> {
   explicit SigmoidCrossEntropyLossLayer(const LayerParameter& param)
       : LossLayer<Dtype>(param),
           sigmoid_layer_(new SigmoidLayer<Dtype>(param)),
-          sigmoid_output_(new Blob<Dtype>()) {}
+          sigmoid_output_(new Blob<Dtype>()) {
+    if (param.has_cross_entropy_param())
+      use_sigmoid_ = param.cross_entropy_param().use_sigmoid();
+    else use_sigmoid_ = true;
+    
+  }
   virtual void LayerSetUp(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top);
   virtual void Reshape(const vector<Blob<Dtype>*>& bottom,
@@ -103,6 +108,8 @@ class SigmoidCrossEntropyLossLayer : public LossLayer<Dtype> {
   vector<Blob<Dtype>*> sigmoid_bottom_vec_;
   /// top vector holder to call the underlying SigmoidLayer::Forward
   vector<Blob<Dtype>*> sigmoid_top_vec_;
+  /// whether to use the sigmoid.
+  bool use_sigmoid_;
 };
 
 }  // namespace caffe

@@ -314,7 +314,7 @@ message ParamSpec {
 // NOTE
 // Update the next available ID when you add a new LayerParameter field.
 //
-// LayerParameter next available layer-specific ID: 147 (last added: recurrent_param)
+// LayerParameter next available layer-specific ID: 148 (last added: cross_entropy_param)
 message LayerParameter {
   optional string name = 1; // the layer name
   optional string type = 2; // the layer type
@@ -411,6 +411,7 @@ message LayerParameter {
   optional ThresholdParameter threshold_param = 128;
   optional TileParameter tile_param = 138;
   optional WindowDataParameter window_data_param = 129;
+  optional SigmoidCrossEntropyParameter cross_entropy_param = 147;
 }
 
 // Message that stores parameters used to apply transformation
@@ -1194,6 +1195,11 @@ message WindowDataParameter {
   optional bool cache_images = 12 [default = false];
   // append root_folder to locate images
   optional string root_folder = 13 [default = ""];
+}
+
+message SigmoidCrossEntropyParameter {
+  // whether to use the sigmoid
+  optional bool use_sigmoid = 1 [default = true];
 }
 
 message SPPParameter {

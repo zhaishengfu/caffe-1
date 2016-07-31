@@ -30,7 +30,8 @@ void SigmoidCrossEntropyLossLayer<Dtype>::Forward_cpu(
     const vector<Blob<Dtype>*>& bottom, const vector<Blob<Dtype>*>& top) {
   // The forward pass computes the sigmoid outputs.
   sigmoid_bottom_vec_[0] = bottom[0];
-  sigmoid_layer_->Forward(sigmoid_bottom_vec_, sigmoid_top_vec_);
+  if (use_sigmoid_)
+    sigmoid_layer_->Forward(sigmoid_bottom_vec_, sigmoid_top_vec_);
   // Compute the loss (negative log likelihood)
   const int count = bottom[0]->count();
   const int num = bottom[0]->num();
@@ -57,10 +58,13 @@ void SigmoidCrossEntropyLossLayer<Dtype>::Backward_cpu(
     // First, compute the diff
     const int count = bottom[0]->count();
     const int num = bottom[0]->num();
-    const Dtype* sigmoid_output_data = sigmoid_output_->cpu_data();
+    const Dtype* bottom_data;
+    if (!use_sigmoid_)
+      bottom_data = bottom[0]->cpu_data();
+    else bottom_data = sigmoid_output_->cpu_data();
     const Dtype* target = bottom[1]->cpu_data();
     Dtype* bottom_diff = bottom[0]->mutable_cpu_diff();
-    caffe_sub(count, sigmoid_output_data, target, bottom_diff);
+    caffe_sub(count, bottom_data, target, bottom_diff);
     // Scale down gradient
     const Dtype loss_weight = top[0]->cpu_diff()[0];
     caffe_scal(count, loss_weight / num, bottom_diff);
