@@ -158,9 +158,9 @@ void SparseSliceLayer<Dtype>::Backward_cpu(const vector<Blob<Dtype>*>& top,
 					  }
   }*/
 
-#ifdef CPU_ONLY
+  /*#ifdef CPU_ONLY
   STUB_GPU_FORWARD(SparseSliceLayer, Forward);
-#endif
+  #endif*/
 
 INSTANTIATE_CLASS(SparseSliceLayer);
 REGISTER_LAYER_CLASS(SparseSlice);
