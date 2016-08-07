@@ -122,7 +122,7 @@ void SparseSliceLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
 	  //std::cerr << "top_ptr2=" << top_ptr2[ptr2_idx] << " / ind=" << ind << std::endl;
 	  ptr2_idx++;
 	}
-      if (ptr[ptr_idx] < i+1 && ptr[ptr_idx+1] > i+1) { //TODO: wrong
+      if (ptr[ptr_idx] < i+1 && ptr[ptr_idx+1] > i+1) {
 	top_ptr1[ptr_idx+1] -= 1; // decrement the next ptr on the left
 	//std::cerr << "top_ptr1=" << top_ptr1[ptr_idx+1] << std::endl;
       }
@@ -134,7 +134,7 @@ void SparseSliceLayer<Dtype>::Forward_cpu(const vector<Blob<Dtype>*>& bottom,
       top_data1[top1_count] = bottom_data[i];
       top_indices1[top1_count] = ind;
       //std::cerr << "i=" << i << " / ind=" << ind << " / ptr_idx=" << ptr_idx << " / ptr=" << ptr[ptr_idx] << std::endl;
-      if (ptr[ptr_idx] == i+1) { //TODO: wrong
+      if (ptr[ptr_idx] == i+1) {
 	if (i == 0)
 	  top_ptr1[ptr_idx] = ptr[ptr_idx]; // 1
 	else {
