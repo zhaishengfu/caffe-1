@@ -15,7 +15,7 @@
 namespace caffe {
 
 template <typename TypeParam>
-class SparseSliceLayerTest : public MultiDeviceTest<TypeParam> {
+class SparseSliceLayerTest : public CPUDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
@@ -58,7 +58,7 @@ class SparseSliceLayerTest : public MultiDeviceTest<TypeParam> {
 };
 
 template <typename TypeParam>
-class SparseSliceLayerTest2 : public MultiDeviceTest<TypeParam> {
+class SparseSliceLayerTest2 : public CPUDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
