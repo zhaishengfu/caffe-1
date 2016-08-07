@@ -12,7 +12,7 @@ namespace caffe {
 
   /**
    * @brief Takes a SparseBlob and slices it along either the num or channel dimension,
-   *        outputting multiple sliced Blob results.
+   *        outputting multiple sliced SparseBlob results.
    */
   template <typename Dtype>
 class SparseSliceLayer : public Layer<Dtype> {

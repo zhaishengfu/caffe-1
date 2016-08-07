@@ -10,6 +10,8 @@
 #include "caffe/test/test_caffe_main.hpp"
 #include "caffe/test/test_gradient_check_util.hpp"
 
+#include <iostream>
+
 namespace caffe {
 
 template <typename TypeParam>
@@ -18,197 +20,175 @@ class SparseSliceLayerTest : public MultiDeviceTest<TypeParam> {
 
  protected:
   SparseSliceLayerTest()
-      : blob_bottom_(new SparseBlob<Dtype>(6, 12, 2, 3)),
+    : blob_bottom_(new SparseBlob<Dtype>(1, 1, 8)),
         blob_top_0_(new SparseBlob<Dtype>()),
-        blob_top_1_(new SparseBlob<Dtype>()) {}
+      blob_top_1_(new SparseBlob<Dtype>()) {}
   virtual void SetUp() {
-    // fill the values
-    Caffe::set_random_seed(1701);
-    FillerParameter filler_param;
-    GaussianFiller<Dtype> filler(filler_param);
-    filler.Fill(this->blob_bottom_);
-    blob_top_vec_0_.push_back(blob_top_0_);
-    blob_top_vec_0_.push_back(blob_top_1_);
+    // fill the values up
+    std::vector<Dtype> init_data = {10,-2,3,9,3,7,8,7};
+    Dtype* data = blob_bottom_->mutable_cpu_data();
+    for (size_t i=0;i<init_data.size();i++)
+      data[i] = init_data[i];
+
+    std::vector<int> init_ind = {1,5,1,2,6,2,3,4};
+    int* indices = blob_bottom_->mutable_cpu_indices();
+    for (size_t i=0;i<init_ind.size();i++)
+      indices[i] = init_ind[i];
+
+    std::vector<int> init_ptr = {1,3,6,9};
+    int* ptr = blob_bottom_->mutable_cpu_ptr();
+    for (size_t i=0;i<init_ptr.size();i++)
+      ptr[i] = init_ptr[i];
+    
+    blob_bottom_vec_.push_back(blob_bottom_);
     blob_top_vec_1_.push_back(blob_top_0_);
     blob_top_vec_1_.push_back(blob_top_1_);
-    blob_top_vec_1_.push_back(blob_top_2_);
-    blob_bottom_vec_.push_back(blob_bottom_);
-  }
-
-  virtual void ReduceBottomBlobSize() {
-    blob_bottom_->Reshape(4, 5, 2, 2);
-    FillerParameter filler_param;
-    GaussianFiller<Dtype> filler(filler_param);
-    filler.Fill(this->blob_bottom_);
   }
 
   virtual ~SparseSliceLayerTest() {
     delete blob_top_0_; delete blob_top_1_;
-    delete blob_top_2_; delete blob_bottom_;
+    delete blob_bottom_;
   }
 
-  Blob<Dtype>* const blob_bottom_;
-  Blob<Dtype>* const blob_top_0_;
-  Blob<Dtype>* const blob_top_1_;
-  Blob<Dtype>* const blob_top_2_;
+  SparseBlob<Dtype>* const blob_bottom_;
+  SparseBlob<Dtype>* const blob_top_0_;
+  SparseBlob<Dtype>* const blob_top_1_;
   vector<Blob<Dtype>*> blob_top_vec_0_, blob_top_vec_1_;
   vector<Blob<Dtype>*> blob_bottom_vec_;
 };
 
-TYPED_TEST_CASE(SliceLayerTest, TestDtypesAndDevices);
+template <typename TypeParam>
+class SparseSliceLayerTest2 : public MultiDeviceTest<TypeParam> {
+  typedef typename TypeParam::Dtype Dtype;
 
-TYPED_TEST(SliceLayerTest, TestSetupNum) {
+ protected:
+  SparseSliceLayerTest2()
+    : blob_bottom_(new SparseBlob<Dtype>(1, 1, 11)),
+        blob_top_0_(new SparseBlob<Dtype>()),
+      blob_top_1_(new SparseBlob<Dtype>()) {}
+  virtual void SetUp() {
+    // fill the values
+    std::vector<Dtype> init_data = {3,8,7,5,8,9,9,13,4,2,-1};
+    Dtype* data = blob_bottom_->mutable_cpu_data();
+    for (size_t i=0;i<init_data.size();i++)
+      data[i] = init_data[i];
+
+    std::vector<int> init_ind = {1,3,4,5,2,4,5,6,2,5,6};
+    int* indices = blob_bottom_->mutable_cpu_indices();
+    for (size_t i=0;i<init_ind.size();i++)
+      indices[i] = init_ind[i];
+
+    std::vector<int> init_ptr = {1,5,9,12};
+    int* ptr = blob_bottom_->mutable_cpu_ptr();
+    for (size_t i=0;i<init_ptr.size();i++)
+      ptr[i] = init_ptr[i];
+    
+    blob_bottom_vec_.push_back(blob_bottom_);
+    blob_top_vec_1_.push_back(blob_top_0_);
+    blob_top_vec_1_.push_back(blob_top_1_);
+  }
+
+  virtual ~SparseSliceLayerTest2() {
+    delete blob_top_0_; delete blob_top_1_;
+    delete blob_bottom_;
+  }
+
+  SparseBlob<Dtype>* const blob_bottom_;
+  SparseBlob<Dtype>* const blob_top_0_;
+  SparseBlob<Dtype>* const blob_top_1_;
+  vector<Blob<Dtype>*> blob_top_vec_0_, blob_top_vec_1_;
+  vector<Blob<Dtype>*> blob_bottom_vec_;
+};
+
+TYPED_TEST_CASE(SparseSliceLayerTest, TestDtypesAndDevices);
+TYPED_TEST_CASE(SparseSliceLayerTest2, TestDtypesAndDevices);
+
+TYPED_TEST(SparseSliceLayerTest, TestSetup) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
-  layer_param.mutable_slice_param()->set_axis(0);
-  SliceLayer<Dtype> layer(layer_param);
+  layer_param.mutable_slice_param()->add_slice_point(5);
+  SparseSliceLayer<Dtype> layer(layer_param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_1_);
-  EXPECT_EQ(this->blob_bottom_->num(), 3 * this->blob_top_0_->num());
-  EXPECT_EQ(this->blob_top_0_->num(), this->blob_top_1_->num());
-  EXPECT_EQ(this->blob_top_0_->num(), this->blob_top_2_->num());
-  EXPECT_EQ(this->blob_bottom_->channels(), this->blob_top_0_->channels());
-  EXPECT_EQ(this->blob_bottom_->height(), this->blob_top_0_->height());
-  EXPECT_EQ(this->blob_bottom_->width(), this->blob_top_0_->width());
+  EXPECT_EQ(6,this->blob_top_0_->nnz());
+  EXPECT_EQ(2,this->blob_top_1_->nnz());
 }
 
-TYPED_TEST(SliceLayerTest, TestSetupChannels) {
+TYPED_TEST(SparseSliceLayerTest, TestForward1) {
+  typedef typename TypeParam::Dtype Dtype;
+  LayerParameter layer_param;
+  layer_param.mutable_slice_param()->add_slice_point(5);
+  SparseSliceLayer<Dtype> layer(layer_param);
+  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_1_);
+  layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_1_);
+
+  std::vector<Dtype> ref_data0 = {10,3,9,7,8,7};  
+  const Dtype* data0 = this->blob_top_0_->cpu_data();
+  for (size_t i=0;i<ref_data0.size();i++)
+    EXPECT_EQ(ref_data0[i],data0[i]);
+
+  std::vector<Dtype> ref_data1 = {-2,3};
+  const Dtype* data1 = this->blob_top_1_->cpu_data();
+  for (size_t i=0;i<ref_data1.size();i++)
+    EXPECT_EQ(ref_data1[i],data1[i]);
+
+  std::vector<int> ref_ind0 = {1,1,2,2,3,4};
+  const int* ind0 = this->blob_top_0_->cpu_indices();
+  for (size_t i=0;i<ref_ind0.size();i++)
+    EXPECT_EQ(ref_ind0[i],ind0[i]);
+  
+  std::vector<int> ref_ind1 = {1,2};
+  const int* ind1 = this->blob_top_1_->cpu_indices();
+  for (size_t i=0;i<ref_ind1.size();i++)
+    EXPECT_EQ(ref_ind1[i],ind1[i]);
+  
+  std::vector<int> ref_ptr0 = {1,2,4,7};
+  const int* ptr0 = this->blob_top_0_->cpu_ptr();
+  for (size_t i=0;i<ref_ptr0.size();i++)
+    EXPECT_EQ(ref_ptr0[i],ptr0[i]);
+
+  std::vector<int> ref_ptr1 = {1,2,3};
+  const int* ptr1 = this->blob_top_1_->cpu_ptr();
+  for (size_t i=0;i<ref_ptr1.size();i++)
+    EXPECT_EQ(ref_ptr1[i],ptr1[i]);
+}
+
+TYPED_TEST(SparseSliceLayerTest2, TestForward2) {
   typedef typename TypeParam::Dtype Dtype;
   LayerParameter layer_param;
   layer_param.mutable_slice_param()->add_slice_point(3);
-  SliceLayer<Dtype> layer(layer_param);
-  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_0_);
-  EXPECT_EQ(this->blob_top_0_->num(), this->blob_bottom_->num());
-  EXPECT_EQ(this->blob_top_0_->channels(), 3);
-  EXPECT_EQ(this->blob_top_1_->channels(), 9);
-  EXPECT_EQ(this->blob_bottom_->channels(),
-    this->blob_top_0_->channels() + this->blob_top_1_->channels());
-  EXPECT_EQ(this->blob_bottom_->height(), this->blob_top_0_->height());
-  EXPECT_EQ(this->blob_bottom_->width(), this->blob_top_0_->width());
-}
-
-TYPED_TEST(SliceLayerTest, TestTrivialSlice) {
-  // Test the trivial (single output) "slice" operation --
-  // should be the identity.
-  typedef typename TypeParam::Dtype Dtype;
-  LayerParameter layer_param;
-  SliceLayer<Dtype> layer(layer_param);
-  this->blob_top_vec_0_.resize(1);
-  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_0_);
-  ASSERT_EQ(this->blob_bottom_->shape(), this->blob_top_0_->shape());
-  for (int i = 0; i < this->blob_bottom_->count(); ++i) {
-    EXPECT_EQ(this->blob_bottom_->cpu_data()[i],
-              this->blob_top_0_->cpu_data()[i]);
-  }
-}
-
-TYPED_TEST(SliceLayerTest, TestSliceAcrossNum) {
-  typedef typename TypeParam::Dtype Dtype;
-  LayerParameter layer_param;
-  layer_param.mutable_slice_param()->set_axis(0);
-  SliceLayer<Dtype> layer(layer_param);
-  layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_0_);
-  const int top_num = this->blob_bottom_->num() / 2;
-  ASSERT_EQ(top_num, this->blob_top_0_->num());
-  ASSERT_EQ(top_num, this->blob_top_1_->num());
-  layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_0_);
-  for (int n = 0; n < top_num; ++n) {
-    for (int c = 0; c < this->blob_top_0_->channels(); ++c) {
-      for (int h = 0; h < this->blob_bottom_->height(); ++h) {
-        for (int w = 0; w < this->blob_bottom_->width(); ++w) {
-          EXPECT_EQ(this->blob_bottom_->data_at(n, c, h, w),
-                    this->blob_top_0_->data_at(n, c, h, w));
-        }
-      }
-    }
-    for (int c = 0; c < this->blob_top_1_->channels(); ++c) {
-      for (int h = 0; h < this->blob_bottom_->height(); ++h) {
-        for (int w = 0; w < this->blob_bottom_->width(); ++w) {
-          EXPECT_EQ(this->blob_bottom_->data_at(n + 3, c, h, w),
-                    this->blob_top_1_->data_at(n, c, h, w));
-        }
-      }
-    }
-  }
-}
-
-TYPED_TEST(SliceLayerTest, TestSliceAcrossChannels) {
-  typedef typename TypeParam::Dtype Dtype;
-  LayerParameter layer_param;
-  // Slice at 2, 8: should produce output blobs with #channels 2, 6, 4.
-  const int kSlicePoint0 = 2;
-  const int kSlicePoint1 = 8;
-  layer_param.mutable_slice_param()->add_slice_point(kSlicePoint0);
-  layer_param.mutable_slice_param()->add_slice_point(kSlicePoint1);
-  SliceLayer<Dtype> layer(layer_param);
+  SparseSliceLayer<Dtype> layer(layer_param);
   layer.SetUp(this->blob_bottom_vec_, this->blob_top_vec_1_);
-  ASSERT_EQ(kSlicePoint0, this->blob_top_0_->channels());
-  ASSERT_EQ(kSlicePoint1 - kSlicePoint0, this->blob_top_1_->channels());
-  ASSERT_EQ(this->blob_bottom_->channels() - kSlicePoint1,
-            this->blob_top_2_->channels());
   layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_1_);
-  for (int n = 0; n < this->blob_bottom_->num(); ++n) {
-    for (int c = 0; c < this->blob_top_0_->channels(); ++c) {
-      for (int h = 0; h < this->blob_bottom_->height(); ++h) {
-        for (int w = 0; w < this->blob_bottom_->width(); ++w) {
-          EXPECT_EQ(this->blob_bottom_->data_at(n, c, h, w),
-              this->blob_top_0_->data_at(n, c, h, w));
-        }
-      }
-    }
-    for (int c = 0; c < this->blob_top_1_->channels(); ++c) {
-      for (int h = 0; h < this->blob_bottom_->height(); ++h) {
-        for (int w = 0; w < this->blob_bottom_->width(); ++w) {
-          EXPECT_EQ(this->blob_bottom_->data_at(n, c + kSlicePoint0, h, w),
-              this->blob_top_1_->data_at(n, c, h, w));
-        }
-      }
-    }
-    for (int c = 0; c < this->blob_top_2_->channels(); ++c) {
-      for (int h = 0; h < this->blob_bottom_->height(); ++h) {
-        for (int w = 0; w < this->blob_bottom_->width(); ++w) {
-          EXPECT_EQ(this->blob_bottom_->data_at(n, c + kSlicePoint1, h, w),
-              this->blob_top_2_->data_at(n, c, h, w));
-        }
-      }
-    }
-  }
-}
 
-TYPED_TEST(SliceLayerTest, TestGradientTrivial) {
-  // Test the trivial (single output) "slice" operation --
-  // should be the identity.
-  typedef typename TypeParam::Dtype Dtype;
-  LayerParameter layer_param;
-  SliceLayer<Dtype> layer(layer_param);
-  GradientChecker<Dtype> checker(1e-2, 1e-3);
-  this->blob_top_vec_0_.resize(1);
-  checker.CheckGradientEltwise(&layer, this->blob_bottom_vec_,
-      this->blob_top_vec_0_);
-}
+  std::vector<Dtype> ref_data0 = {3,8,4};  
+  const Dtype* data0 = this->blob_top_0_->cpu_data();
+  for (size_t i=0;i<ref_data0.size();i++)
+    EXPECT_EQ(ref_data0[i],data0[i]);
 
-TYPED_TEST(SliceLayerTest, TestGradientAcrossNum) {
-  typedef typename TypeParam::Dtype Dtype;
-  // Gradient checks are slow; reduce blob size.
-  this->ReduceBottomBlobSize();
-  LayerParameter layer_param;
-  layer_param.mutable_slice_param()->set_axis(0);
-  SliceLayer<Dtype> layer(layer_param);
-  GradientChecker<Dtype> checker(1e-2, 1e-3);
-  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
-    this->blob_top_vec_0_);
-}
+  std::vector<Dtype> ref_data1 = {8,7,5,9,9,13,2,-1};
+  const Dtype* data1 = this->blob_top_1_->cpu_data();
+  for (size_t i=0;i<ref_data1.size();i++)
+    EXPECT_EQ(ref_data1[i],data1[i]);
 
-TYPED_TEST(SliceLayerTest, TestGradientAcrossChannels) {
-  typedef typename TypeParam::Dtype Dtype;
-  // Gradient checks are slow; reduce blob size.
-  this->ReduceBottomBlobSize();
-  LayerParameter layer_param;
-  const int kSlicePoint = 4;
-  layer_param.mutable_slice_param()->add_slice_point(kSlicePoint);
-  SliceLayer<Dtype> layer(layer_param);
-  GradientChecker<Dtype> checker(1e-2, 1e-3);
-  checker.CheckGradientExhaustive(&layer, this->blob_bottom_vec_,
-    this->blob_top_vec_0_);
+  std::vector<int> ref_ind0 = {1,2,2};
+  const int* ind0 = this->blob_top_0_->cpu_indices();
+  for (size_t i=0;i<ref_ind0.size();i++)
+    EXPECT_EQ(ref_ind0[i],ind0[i]);
+  
+  std::vector<int> ref_ind1 = {1,2,3,2,3,4,3,4};
+  const int* ind1 = this->blob_top_1_->cpu_indices();
+  for (size_t i=0;i<ref_ind1.size();i++)
+    EXPECT_EQ(ref_ind1[i],ind1[i]);
+  
+  std::vector<int> ref_ptr0 = {1,2,3,4};
+  const int* ptr0 = this->blob_top_0_->cpu_ptr();
+  for (size_t i=0;i<ref_ptr0.size();i++)
+    EXPECT_EQ(ref_ptr0[i],ptr0[i]);
+  
+  std::vector<int> ref_ptr1 = {1,4,7,9};
+  const int* ptr1 = this->blob_top_1_->cpu_ptr();
+  for (size_t i=0;i<ref_ptr1.size();i++)
+    EXPECT_EQ(ref_ptr1[i],ptr1[i]);
 }
 
 }  // namespace caffe
