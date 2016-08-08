@@ -260,7 +260,10 @@ Blob<Dtype>* GetTopBlob(const shared_ptr<LayerParameter>& param, int pos) {
       return new Blob<Dtype>();
     }
   }
-  return new Blob<Dtype>();
+  else if (param->type() == "SparseSlice") {
+    return new SparseBlob<Dtype>();
+  }
+  else return new Blob<Dtype>();
 }
 
 template Blob<float>* GetTopBlob(const shared_ptr<LayerParameter>& param,
