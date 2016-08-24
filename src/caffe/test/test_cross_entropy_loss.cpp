@@ -6,7 +6,7 @@
 #include "caffe/blob.hpp"
 #include "caffe/common.hpp"
 #include "caffe/filler.hpp"
-#include "caffe/layers/cross_entropy.hpp"
+#include "caffe/layers/cross_entropy_loss.hpp"
 #include "caffe/layers/sigmoid_layer.hpp"
 
 #ifdef USE_CUDNN
@@ -19,11 +19,11 @@
 namespace caffe {
 
 template <typename TypeParam>
-class CrossEntropyLayerTest : public MultiDeviceTest<TypeParam> {
+class CrossEntropyLossLayerTest : public MultiDeviceTest<TypeParam> {
   typedef typename TypeParam::Dtype Dtype;
 
  protected:
-  CrossEntropyLayerTest()
+  CrossEntropyLossLayerTest()
       : blob_bottom_data_(new Blob<Dtype>(10, 5, 1, 1)),
         blob_bottom_targets_(new Blob<Dtype>(10, 5, 1, 1)),
 	blob_top_sig_(new Blob<Dtype>()),
@@ -45,7 +45,7 @@ class CrossEntropyLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_targets_);
     blob_top_vec_.push_back(blob_top_loss_);
   }
-  virtual ~CrossEntropyLayerTest() {
+  virtual ~CrossEntropyLossLayerTest() {
     delete blob_bottom_data_;
     delete blob_bottom_targets_;
     delete blob_top_sig_;
@@ -93,7 +93,7 @@ class CrossEntropyLayerTest : public MultiDeviceTest<TypeParam> {
       siglayer.Forward(this->blob_bottom_vec_, this->blob_top_vec_sig_);
       
       // cross entropy layer
-      CrossEntropyLayer<Dtype> layer(layer_param);
+      CrossEntropyLossLayer<Dtype> layer(layer_param);
       layer.SetUp(this->blob_top_vec_sig_, this->blob_top_vec_);
       Dtype layer_loss =
           layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
@@ -116,9 +116,9 @@ class CrossEntropyLayerTest : public MultiDeviceTest<TypeParam> {
   vector<Blob<Dtype>*> blob_top_vec_,blob_top_vec_sig_;
 };
 
-TYPED_TEST_CASE(CrossEntropyLayerTest, TestDtypesAndDevices);
+TYPED_TEST_CASE(CrossEntropyLossLayerTest, TestDtypesAndDevices);
 
-TYPED_TEST(CrossEntropyLayerTest, TestCrossEntropy) {
+TYPED_TEST(CrossEntropyLossLayerTest, TestCrossEntropy) {
   this->TestForward();
 }
 
