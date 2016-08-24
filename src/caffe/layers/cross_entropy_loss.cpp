@@ -20,8 +20,8 @@ namespace caffe {
     for (int i=0;i<num;i++) {
       Dtype loss = 0;
       for (int j=i*dim;j<(i+1)*dim;j++) {
-	loss -= input_data[j] * (target[j] - (input_data[j] >= 0)) -
-	  log(1 + exp(input_data[j] - 2 * input_data[j] * (input_data[j] >= 0)));
+	loss -= target[j] * log(input_data[j] + (target[j] == Dtype(0))) +
+	  (1 - target[j]) * log(1 - input_data[j] + (target[j] == Dtype(1)));
       }
       top[0]->mutable_cpu_data()[i] = loss / num;
     }

@@ -81,6 +81,7 @@ class SigmoidCrossEntropyLossLayerTest : public MultiDeviceTest<TypeParam> {
       Dtype layer_loss =
           layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
       const int count = this->blob_bottom_data_->count();
+      std::cerr << "count=" << count << std::endl;
       const int num = this->blob_bottom_data_->num();
       const Dtype* blob_bottom_data = this->blob_bottom_data_->cpu_data();
       const Dtype* blob_bottom_targets =

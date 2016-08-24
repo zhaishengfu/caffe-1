@@ -36,13 +36,15 @@ class CrossEntropyLossLayerTest : public MultiDeviceTest<TypeParam> {
     blob_bottom_vec_.push_back(blob_bottom_data_);
     // Set bottom sig vector
     blob_top_vec_sig_.push_back(blob_top_sig_);
+    blob_tmp_vec_.push_back(blob_top_sig_);
+    
     // Fill the targets vector
     FillerParameter targets_filler_param;
     targets_filler_param.set_min(0);
     targets_filler_param.set_max(1);
     UniformFiller<Dtype> targets_filler(targets_filler_param);
     targets_filler.Fill(blob_bottom_targets_);
-    blob_bottom_vec_.push_back(blob_bottom_targets_);
+    blob_tmp_vec_.push_back(blob_bottom_targets_);
     blob_top_vec_.push_back(blob_top_loss_);
   }
   virtual ~CrossEntropyLossLayerTest() {
@@ -94,9 +96,9 @@ class CrossEntropyLossLayerTest : public MultiDeviceTest<TypeParam> {
       
       // cross entropy layer
       CrossEntropyLossLayer<Dtype> layer(layer_param);
-      layer.SetUp(this->blob_top_vec_sig_, this->blob_top_vec_);
+      layer.SetUp(this->blob_tmp_vec_, this->blob_top_vec_);
       Dtype layer_loss =
-          layer.Forward(this->blob_bottom_vec_, this->blob_top_vec_);
+          layer.Forward(this->blob_tmp_vec_, this->blob_top_vec_);
       const int count = this->blob_bottom_data_->count();
       const int num = this->blob_bottom_data_->num();
       const Dtype* blob_bottom_data = this->blob_bottom_data_->cpu_data();
@@ -104,7 +106,7 @@ class CrossEntropyLossLayerTest : public MultiDeviceTest<TypeParam> {
           this->blob_bottom_targets_->cpu_data();
       Dtype reference_loss = kLossWeight * CrossEntropyReference(
           count, num, blob_bottom_data, blob_bottom_targets);
-	  EXPECT_NEAR(reference_loss, layer_loss, eps) << "debug: trial #" << i;
+      EXPECT_NEAR(reference_loss, layer_loss, eps) << "debug: trial #" << i;
     }
   }
 
@@ -112,7 +114,7 @@ class CrossEntropyLossLayerTest : public MultiDeviceTest<TypeParam> {
   Blob<Dtype>* const blob_bottom_targets_;
   Blob<Dtype>* const blob_top_sig_;
   Blob<Dtype>* const blob_top_loss_;
-  vector<Blob<Dtype>*> blob_bottom_vec_;
+  vector<Blob<Dtype>*> blob_bottom_vec_, blob_tmp_vec_;
   vector<Blob<Dtype>*> blob_top_vec_,blob_top_vec_sig_;
 };
 
